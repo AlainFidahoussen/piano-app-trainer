@@ -296,6 +296,78 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hidden { display: none !important; }
+
+  .settings-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 40;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+  .settings-toggle:hover { border-color: var(--accent-2); }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 55;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: min(360px, 88vw);
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border-right: 1px solid var(--border);
+    z-index: 60;
+    overflow-y: auto;
+    padding: 18px;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 8px 0 24px rgba(0,0,0,0.3);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .sidebar-header h2 {
+    font-size: 1.05rem;
+    margin: 0;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .sidebar-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .sidebar-close:hover { color: var(--text); }
+  .sidebar .card { margin-bottom: 16px; }
 </style>
 </head>
 <body>
@@ -310,11 +382,13 @@
   <div id="startError" class="hidden" style="color:var(--bad); max-width:460px; font-size:0.85rem; line-height:1.5;"></div>
 </div>
 
-<div class="wrap">
-  <header class="top">
-    <h1>🎹 Piano Interval Ear Trainer</h1>
-    <p>Train your ear to recognize intervals from unison up to the 13th.</p>
-  </header>
+<button class="settings-toggle" id="settingsToggle" aria-label="Open settings" title="Playback mode &amp; intervals">⚙</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar" aria-label="Settings">
+  <div class="sidebar-header">
+    <h2>Settings</h2>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close settings">×</button>
+  </div>
 
   <div class="card">
     <h2>Playback mode</h2>
@@ -344,6 +418,13 @@
     <div class="interval-grid" id="simpleGrid"></div>
     <div class="interval-grid compound" id="compoundGrid"></div>
   </div>
+</aside>
+
+<div class="wrap">
+  <header class="top">
+    <h1>🎹 Piano Interval Ear Trainer</h1>
+    <p>Train your ear to recognize intervals from unison up to the 13th.</p>
+  </header>
 
   <div class="card stage">
     <div class="status" id="statusLine">Click start above to begin.</div>
@@ -741,6 +822,22 @@
     saveSettings();
     refreshCheckboxes();
   }
+
+  // ---------- Sidebar ----------
+  function openSidebar() {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebarBackdrop").classList.add("open");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebarBackdrop").classList.remove("open");
+  }
+  document.getElementById("settingsToggle").addEventListener("click", openSidebar);
+  document.getElementById("sidebarClose").addEventListener("click", closeSidebar);
+  document.getElementById("sidebarBackdrop").addEventListener("click", closeSidebar);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSidebar();
+  });
 
   // ---------- Wire up controls ----------
   document.getElementById("modeSeg").addEventListener("click", (e) => {
