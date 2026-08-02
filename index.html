@@ -775,15 +775,34 @@
     kb.addEventListener("pointercancel", endPointer);
   }
 
+  function scrollKeyboardToShow(elements) {
+    const wrap = document.getElementById("keyboard-wrap");
+    const kb = document.getElementById("keyboard");
+    if (!elements.length || wrap.clientWidth >= kb.scrollWidth) return;
+    let left = Infinity, right = -Infinity;
+    elements.forEach(el => {
+      left = Math.min(left, el.offsetLeft);
+      right = Math.max(right, el.offsetLeft + el.offsetWidth);
+    });
+    const target = Math.max(0, Math.min(
+      (left + right) / 2 - wrap.clientWidth / 2,
+      kb.scrollWidth - wrap.clientWidth
+    ));
+    wrap.scrollTo({ left: target, behavior: "smooth" });
+  }
+
   function lightKeys(entries) {
     document.querySelectorAll("#keyboard .lit").forEach(el => el.classList.remove("lit", "target"));
+    const litEls = [];
     entries.forEach(({ midi, cls }) => {
       const el = document.querySelector(`#keyboard [data-midi="${midi}"]`);
       if (el) {
         el.classList.add("lit");
         if (cls === "target") el.classList.add("target");
+        litEls.push(el);
       }
     });
+    scrollKeyboardToShow(litEls);
   }
 
   // ---------- Settings UI ----------
@@ -872,10 +891,12 @@
   document.getElementById("replayNoteA").addEventListener("click", () => {
     if (!state.current || !audioReady) return;
     playNote(state.current.rootMidi, Tone.now() + 0.02, 1.2);
+    lightKeys([{ midi: state.current.rootMidi, cls: "root" }]);
   });
   document.getElementById("replayNoteB").addEventListener("click", () => {
     if (!state.current || !audioReady) return;
     playNote(state.current.targetMidi, Tone.now() + 0.02, 1.2);
+    lightKeys([{ midi: state.current.targetMidi, cls: "target" }]);
   });
 
   // ---------- Init ----------
