@@ -237,6 +237,10 @@
     border: 1px solid #85807a;
     border-radius: 0 0 5px 5px;
     box-shadow: inset 0 -4px 6px rgba(0,0,0,0.08);
+    touch-action: pan-x;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .black-key {
     position: absolute;
@@ -246,10 +250,22 @@
     border: 1px solid #000;
     border-radius: 0 0 4px 4px;
     z-index: 2;
+    touch-action: pan-x;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .white-key.lit { background: linear-gradient(180deg, #ffe9b3, #eec46b); }
   .black-key.lit { background: linear-gradient(180deg, #6ea8fe, #2f5fb8); }
   .white-key.lit.target, .black-key.lit.target { background: linear-gradient(180deg, #9be3b8, #3fc27a); }
+  .white-key.pressed { background: linear-gradient(180deg, #e5c1f2, #c792ea); }
+  .black-key.pressed { background: linear-gradient(180deg, #c792ea, #8a4fb0); }
+  #keyboard-hint {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin: -4px 0 10px;
+  }
   footer.note {
     text-align: center;
     color: var(--muted);
@@ -350,6 +366,7 @@
 
   <div class="card">
     <h2>Keyboard</h2>
+    <div id="keyboard-hint">Tap or click the keys to play them yourself</div>
     <div id="keyboard-wrap"><div id="keyboard"></div></div>
   </div>
 
@@ -463,6 +480,16 @@
 
   function playNote(midi, time, dur) {
     sampler.triggerAttackRelease(midiToNote(midi), dur || 1.4, time);
+  }
+
+  function pressNote(midi) {
+    if (!audioReady) return;
+    sampler.triggerAttack(midiToNote(midi), Tone.now());
+  }
+
+  function releaseNote(midi) {
+    if (!audioReady) return;
+    sampler.triggerRelease(midiToNote(midi), Tone.now());
   }
 
   function playCurrentQuestion() {
@@ -630,6 +657,39 @@
     }
   }
 
+  // ---------- Interactive keyboard (play notes by hand) ----------
+  const activePointers = new Map(); // pointerId -> { midi, el }
+
+  function keyElFromEvent(e) {
+    return e.target.closest(".white-key, .black-key");
+  }
+
+  function initKeyboardInteraction() {
+    const kb = document.getElementById("keyboard");
+
+    kb.addEventListener("pointerdown", (e) => {
+      const el = keyElFromEvent(e);
+      if (!el || !audioReady) return;
+      const midi = Number(el.dataset.midi);
+      el.setPointerCapture(e.pointerId);
+      el.classList.add("pressed");
+      pressNote(midi);
+      activePointers.set(e.pointerId, { midi, el });
+      e.preventDefault();
+    });
+
+    function endPointer(e) {
+      const entry = activePointers.get(e.pointerId);
+      if (!entry) return;
+      releaseNote(entry.midi);
+      entry.el.classList.remove("pressed");
+      activePointers.delete(e.pointerId);
+    }
+
+    kb.addEventListener("pointerup", endPointer);
+    kb.addEventListener("pointercancel", endPointer);
+  }
+
   function lightKeys(entries) {
     document.querySelectorAll("#keyboard .lit").forEach(el => el.classList.remove("lit", "target"));
     entries.forEach(({ midi, cls }) => {
@@ -726,6 +786,7 @@
 
   buildIntervalCheckboxes();
   buildKeyboard();
+  initKeyboardInteraction();
   applySettingsToUI();
 
   function showStartError(message) {
